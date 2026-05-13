@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { parseCSV, csvToListings, type Listing as DatasetListing } from "@/lib/datasetParser";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, MapPin, Star, ShoppingCart, Heart, MessageCircle,
@@ -53,19 +54,19 @@ const sortOptions: { key: SortKey; label: string }[] = [
   { key: "distance", label: "Nearest First" },
 ];
 
-const locations = ["All Locations", "Punjab", "Maharashtra", "Gujarat", "Kashmir", "Haryana", "Tamil Nadu", "Andhra Pradesh", "Karnataka"];
+const locations = ["All Locations", "Punjab", "Maharashtra", "Gujarat", "Kashmir", "Haryana", "Tamil Nadu", "Andhra Pradesh", "Karnataka", "Delhi", "Uttar Pradesh", "Madhya Pradesh", "Rajasthan"];
 
 const listings: Listing[] = [
-  { id: 1, name: "Organic Basmati Rice", farmer: "Rajesh Kumar", location: "Amritsar", state: "Punjab", distance: 12, price: 85, unit: "/kg", oldPrice: 120, rating: 4.8, reviews: 234, image: "🌾", category: "grains", organic: true, verified: true, freshness: "Harvested 3 days ago", freshnessHours: 72, available: "500 kg", trending: true, minOrder: 10 },
-  { id: 2, name: "Alphonso Mangoes", farmer: "Priya Deshmukh", location: "Ratnagiri", state: "Maharashtra", distance: 85, price: 450, unit: "/dz", oldPrice: 600, rating: 4.9, reviews: 189, image: "🥭", category: "fruits", organic: true, verified: true, freshness: "Picked today", freshnessHours: 6, available: "200 dozen", trending: true, minOrder: 2 },
-  { id: 3, name: "Fresh Tomatoes", farmer: "Suresh Patel", location: "Nashik", state: "Maharashtra", distance: 45, price: 32, unit: "/kg", oldPrice: 50, rating: 4.6, reviews: 98, image: "🍅", category: "vegetables", organic: false, verified: true, freshness: "Harvested yesterday", freshnessHours: 24, available: "1,200 kg", trending: false, minOrder: 5 },
-  { id: 4, name: "A2 Cow Milk", farmer: "Lakshmi Dairy", location: "Anand", state: "Gujarat", distance: 120, price: 70, unit: "/L", oldPrice: 80, rating: 4.7, reviews: 312, image: "🥛", category: "dairy", organic: true, verified: true, freshness: "Fresh this morning", freshnessHours: 4, available: "500L daily", trending: false, minOrder: 5 },
-  { id: 5, name: "Kashmiri Saffron", farmer: "Abdul Rashid", location: "Pampore", state: "Kashmir", distance: 650, price: 290, unit: "/g", oldPrice: 400, rating: 5.0, reviews: 67, image: "🌸", category: "spices", organic: true, verified: true, freshness: "Current season", freshnessHours: 168, available: "2 kg", trending: true, minOrder: 1 },
-  { id: 6, name: "Whole Wheat Flour", farmer: "Mohan Singh", location: "Karnal", state: "Haryana", distance: 28, price: 42, unit: "/kg", oldPrice: 55, rating: 4.5, reviews: 156, image: "🌾", category: "grains", organic: false, verified: true, freshness: "Ground 2 days ago", freshnessHours: 48, available: "800 kg", trending: false, minOrder: 10 },
-  { id: 7, name: "Organic Turmeric", farmer: "Savita Devi", location: "Erode", state: "Tamil Nadu", distance: 380, price: 180, unit: "/kg", oldPrice: 250, rating: 4.8, reviews: 203, image: "🫚", category: "spices", organic: true, verified: false, freshness: "Sun-dried this week", freshnessHours: 96, available: "300 kg", trending: true, minOrder: 2 },
-  { id: 8, name: "Green Chillies", farmer: "Venkat Reddy", location: "Guntur", state: "Andhra Pradesh", distance: 320, price: 60, unit: "/kg", oldPrice: 80, rating: 4.4, reviews: 78, image: "🌶️", category: "vegetables", organic: false, verified: true, freshness: "Picked today", freshnessHours: 8, available: "600 kg", trending: false, minOrder: 5 },
-  { id: 9, name: "Fresh Coconut", farmer: "Ravi Nair", location: "Mangalore", state: "Karnataka", distance: 210, price: 35, unit: "/pc", oldPrice: 45, rating: 4.3, reviews: 45, image: "🥥", category: "fruits", organic: true, verified: true, freshness: "Picked yesterday", freshnessHours: 20, available: "1000 pcs", trending: false, minOrder: 10 },
-  { id: 10, name: "Desi Ghee", farmer: "Kamla Devi", location: "Jaipur", state: "Gujarat", distance: 95, price: 550, unit: "/L", oldPrice: 700, rating: 4.9, reviews: 421, image: "🧈", category: "dairy", organic: true, verified: true, freshness: "Made 2 days ago", freshnessHours: 48, available: "50L", trending: true, minOrder: 1 },
+  { id: 1, name: "Organic Basmati Rice", farmer: "Rajesh Kumar", location: "Amritsar", state: "Punjab", distance: 12, price: 85, unit: "/kg", oldPrice: 120, rating: 4.8, reviews: 234, image: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=300&fit=crop", category: "grains", organic: true, verified: true, freshness: "Harvested 3 days ago", freshnessHours: 72, available: "500 kg", trending: true, minOrder: 10 },
+  { id: 2, name: "Alphonso Mangoes", farmer: "Priya Deshmukh", location: "Ratnagiri", state: "Maharashtra", distance: 85, price: 450, unit: "/dz", oldPrice: 600, rating: 4.9, reviews: 189, image: "https://images.unsplash.com/photo-1553279768-865429fa0078?w=400&h=300&fit=crop", category: "fruits", organic: true, verified: true, freshness: "Picked today", freshnessHours: 6, available: "200 dozen", trending: true, minOrder: 2 },
+  { id: 3, name: "Fresh Tomatoes", farmer: "Suresh Patel", location: "Nashik", state: "Maharashtra", distance: 45, price: 32, unit: "/kg", oldPrice: 50, rating: 4.6, reviews: 98, image: "https://images.unsplash.com/photo-1546470427-0d4db154ceb8?w=400&h=300&fit=crop", category: "vegetables", organic: false, verified: true, freshness: "Harvested yesterday", freshnessHours: 24, available: "1,200 kg", trending: false, minOrder: 5 },
+  { id: 4, name: "A2 Cow Milk", farmer: "Lakshmi Dairy", location: "Anand", state: "Gujarat", distance: 120, price: 70, unit: "/L", oldPrice: 80, rating: 4.7, reviews: 312, image: "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400&h=300&fit=crop", category: "dairy", organic: true, verified: true, freshness: "Fresh this morning", freshnessHours: 4, available: "500L daily", trending: false, minOrder: 5 },
+  { id: 5, name: "Kashmiri Saffron", farmer: "Abdul Rashid", location: "Pampore", state: "Kashmir", distance: 650, price: 290, unit: "/g", oldPrice: 400, rating: 5.0, reviews: 67, image: "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=400&h=300&fit=crop", category: "spices", organic: true, verified: true, freshness: "Current season", freshnessHours: 168, available: "2 kg", trending: true, minOrder: 1 },
+  { id: 6, name: "Whole Wheat Flour", farmer: "Mohan Singh", location: "Karnal", state: "Haryana", distance: 28, price: 42, unit: "/kg", oldPrice: 55, rating: 4.5, reviews: 156, image: "https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400&h=300&fit=crop", category: "grains", organic: false, verified: true, freshness: "Ground 2 days ago", freshnessHours: 48, available: "800 kg", trending: false, minOrder: 10 },
+  { id: 7, name: "Organic Turmeric", farmer: "Savita Devi", location: "Erode", state: "Tamil Nadu", distance: 380, price: 180, unit: "/kg", oldPrice: 250, rating: 4.8, reviews: 203, image: "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=400&h=300&fit=crop&q=80", category: "spices", organic: true, verified: false, freshness: "Sun-dried this week", freshnessHours: 96, available: "300 kg", trending: true, minOrder: 2 },
+  { id: 8, name: "Green Chillies", farmer: "Venkat Reddy", location: "Guntur", state: "Andhra Pradesh", distance: 320, price: 60, unit: "/kg", oldPrice: 80, rating: 4.4, reviews: 78, image: "https://images.unsplash.com/photo-1583119022894-919a68a3d0e3?w=400&h=300&fit=crop", category: "vegetables", organic: false, verified: true, freshness: "Picked today", freshnessHours: 8, available: "600 kg", trending: false, minOrder: 5 },
+  { id: 9, name: "Fresh Coconut", farmer: "Ravi Nair", location: "Mangalore", state: "Karnataka", distance: 210, price: 35, unit: "/pc", oldPrice: 45, rating: 4.3, reviews: 45, image: "https://images.unsplash.com/photo-1580984969071-a8da8b38e4ce?w=400&h=300&fit=crop", category: "fruits", organic: true, verified: true, freshness: "Picked yesterday", freshnessHours: 20, available: "1000 pcs", trending: false, minOrder: 10 },
+  { id: 10, name: "Desi Ghee", farmer: "Kamla Devi", location: "Jaipur", state: "Gujarat", distance: 95, price: 550, unit: "/L", oldPrice: 700, rating: 4.9, reviews: 421, image: "https://images.unsplash.com/photo-1631209121750-a9f656d28f5d?w=400&h=300&fit=crop", category: "dairy", organic: true, verified: true, freshness: "Made 2 days ago", freshnessHours: 48, available: "50L", trending: true, minOrder: 1 },
 ];
 
 interface MarketplaceProps {
@@ -79,9 +80,25 @@ export default function MarketplaceSection({ onChatOpen }: MarketplaceProps) {
   const [sortBy, setSortBy] = useState<SortKey>("relevance");
   const [showFilters, setShowFilters] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [datasetListings, setDatasetListings] = useState<Listing[]>([]);
+
+  // Fetch and parse CSV dataset on mount
+  useEffect(() => {
+    fetch("/data/agri_dataset_200.csv")
+      .then((res) => res.text())
+      .then((csv) => {
+        const rows = parseCSV(csv);
+        const parsed = csvToListings(rows) as unknown as Listing[];
+        setDatasetListings(parsed);
+      })
+      .catch((err) => console.warn("Dataset load failed, using mock data:", err));
+  }, []);
+
+  // Merge curated listings + CSV dataset
+  const allListings = useMemo(() => [...listings, ...datasetListings], [datasetListings]);
 
   // Advanced filters
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000]);
   const [selectedLocation, setSelectedLocation] = useState("All Locations");
   const [maxDistance, setMaxDistance] = useState(1000);
   const [organicOnly, setOrganicOnly] = useState(false);
@@ -90,7 +107,7 @@ export default function MarketplaceSection({ onChatOpen }: MarketplaceProps) {
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
-    if (priceRange[0] > 0 || priceRange[1] < 1000) count++;
+    if (priceRange[0] > 0 || priceRange[1] < 5000) count++;
     if (selectedLocation !== "All Locations") count++;
     if (maxDistance < 1000) count++;
     if (organicOnly) count++;
@@ -100,7 +117,7 @@ export default function MarketplaceSection({ onChatOpen }: MarketplaceProps) {
   }, [priceRange, selectedLocation, maxDistance, organicOnly, verifiedOnly, minRating]);
 
   const resetFilters = () => {
-    setPriceRange([0, 1000]);
+    setPriceRange([0, 5000]);
     setSelectedLocation("All Locations");
     setMaxDistance(1000);
     setOrganicOnly(false);
@@ -109,7 +126,7 @@ export default function MarketplaceSection({ onChatOpen }: MarketplaceProps) {
   };
 
   const filtered = useMemo(() => {
-    let result = listings.filter((l) => {
+    let result = allListings.filter((l) => {
       const matchCat = activeCat === "all" || l.category === activeCat;
       const matchQ = l.name.toLowerCase().includes(query.toLowerCase()) || l.farmer.toLowerCase().includes(query.toLowerCase()) || l.location.toLowerCase().includes(query.toLowerCase());
       const matchPrice = l.price >= priceRange[0] && l.price <= priceRange[1];
@@ -131,7 +148,7 @@ export default function MarketplaceSection({ onChatOpen }: MarketplaceProps) {
       default: result.sort((a, b) => (b.trending ? 1 : 0) - (a.trending ? 1 : 0)); break;
     }
     return result;
-  }, [activeCat, query, sortBy, priceRange, selectedLocation, maxDistance, organicOnly, verifiedOnly, minRating]);
+  }, [activeCat, query, sortBy, priceRange, selectedLocation, maxDistance, organicOnly, verifiedOnly, minRating, allListings]);
 
   return (
     <section id="marketplace" className="section-padding bg-gradient-to-b from-white to-green-50/50">
@@ -276,8 +293,8 @@ export default function MarketplaceSection({ onChatOpen }: MarketplaceProps) {
           <AnimatePresence mode="popLayout">
             {filtered.map((item) => (
               <motion.div key={item.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="group bg-white rounded-2xl border border-slate-100 overflow-hidden card-hover" id={`product-${item.id}`}>
-                <div className="relative h-40 bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center">
-                  <span className="text-5xl group-hover:scale-110 transition-transform duration-500">{item.image}</span>
+                <div className="relative h-40 bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center overflow-hidden">
+                  <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" loading="lazy" />
                   {item.trending && <div className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500 text-white text-xs font-semibold"><TrendingUp className="w-3 h-3" />Trending</div>}
                   {item.organic && <div className="absolute top-3 right-12 flex items-center gap-1 px-2 py-1 rounded-full bg-green-500 text-white text-xs font-semibold"><BadgeCheck className="w-3 h-3" />Organic</div>}
                   <button onClick={() => setFavs(p => p.includes(item.id) ? p.filter(f => f !== item.id) : [...p, item.id])} className="absolute top-3 right-3 p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white shadow-sm" aria-label="Favorite"><Heart className={`w-4 h-4 ${favs.includes(item.id) ? "fill-red-500 text-red-500" : "text-slate-400"}`} /></button>
